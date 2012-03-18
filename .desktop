@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Pumubuntu
+GenericName=Pomodoro applet
+Comment=Manage your time for beeing productive
+Terminal=false
+Categories=Office
+Exec=python /opt/Pumubuntu/pumubuntu
