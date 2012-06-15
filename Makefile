@@ -1,5 +1,5 @@
 pack:
-	zip -r pumubuntu *
+	zip -r pumubuntu * -x Makefile
 
 clean:
 	rm *.zip
