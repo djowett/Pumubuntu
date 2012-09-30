@@ -11,6 +11,7 @@ import platform
 import os
 import sys
 import argparse
+import pynotify
 
 
 
@@ -24,6 +25,7 @@ class Status():
         self.current_status = Status.STOP
         self.pomodoro_stage = 0
         self.indicator = notification_icon
+        self.notifications = Notifications()
         
     def next(self):
         if (self.pomodoro_stage >= 4):
@@ -54,15 +56,19 @@ class Status():
 	if (self.current_status == self.STOP):
             soundfile += "stop.wav"
             iconfile += "flag-blue.png"
+            self.notifications.stop()
         elif (self.current_status == self.RUN):
             soundfile += "run.wav"
             iconfile += "flag-red.png"
+            self.notifications.run()
         elif (self.current_status == self.BREAK):
             soundfile += "break.wav"
             iconfile += "flag-yellow.png"
+            self.notifications.rest()
         elif (self.current_status == self.PAUSE):
             soundfile += "pause.wav"
             iconfile += "flag-green.png"
+            self.notifications.pause()
 
         self.indicator.set_icon(iconfile)
         self.indicator.set_attention_icon(iconfile)
@@ -261,6 +267,29 @@ class OptionsWindow(gtk.Window):
 		if(event == "quit"):
 			self.destroy()
 
+class Notifications(object):
+    def __init__(self):
+        pynotify.init("pumubuntu")
+        self._run = pynotify.Notification("Here we go!","Time to get to work!")
+        self._run.set_timeout(1)
+        self._stop = pynotify.Notification("Interrupted!","The pomodoro has been stopped!")
+        self._stop.set_timeout(1)
+        self._rest = pynotify.Notification("Break!","Good job! You earned a break!")
+        self._rest.set_timeout(1)
+        self._pause = pynotify.Notification("Long break!","Good job! You earned a long break!")
+        self._pause.set_timeout(1)
+
+    def run(self):
+        self._run.show()
+
+    def stop(self):
+        self._stop.show()
+
+    def rest(self):
+        self._rest.show()
+
+    def pause(self):
+        self._pause.show()
 
 
 if __name__ == "__main__":
