@@ -11,6 +11,7 @@ import platform
 import os
 import sys
 import argparse
+import keybinder
 import pynotify
 
 
@@ -177,20 +178,29 @@ class Preferences():
 		self.KEY_WORK_TIME = "WT"
 		self.KEY_LONG_BREAK_TIME = "LT"
 		self.KEY_SHORT_BREAK_TIME = "ST"
+		self.KEY_START_STOP_KEYBIND = "SSK"
 		self.DEFAULT_WORK_TIME = 25
 		self.DEFAULT_LONG_BREAK_TIME = 15
 		self.DEFAULT_SHORT_BREAK_TIME = 5
+		self.DEFAULT_START_STOP_KEYBIND = "<Ctrl><Alt>P"
 		self.SAVED_WORK_TIME = 0
 		self.SAVED_LONG_BREAK_TIME =0
 		self.SAVED_SHORT_BREAK_TIME =0
+		self.SAVED_START_STOP_KEYBIND =""
 		self.read_work_time()
 
-	def save_preferences(self, work_time, short_break_time, long_break_time):
-		obj = {self.KEY_WORK_TIME: work_time, self.KEY_SHORT_BREAK_TIME: short_break_time, self.KEY_LONG_BREAK_TIME: long_break_time}
+	def save_preferences(self, work_time, short_break_time, long_break_time, start_stop_keybind):
+		keybinds.instance.unbind()
+
+		obj = {self.KEY_WORK_TIME: work_time, self.KEY_SHORT_BREAK_TIME: short_break_time, self.KEY_LONG_BREAK_TIME: long_break_time, self.KEY_START_STOP_KEYBIND: start_stop_keybind }
 		dump = json.dumps(obj)
 		file = open(PREFERENCES_FILENAME, "w")
 		file.write(dump)
 		file.close()
+
+		self.read_work_time()
+		keybinds.preferences = self
+		keybinds.instance.bind()
 
 	def read_work_time(self):
 		try:
@@ -200,10 +210,12 @@ class Preferences():
 			self.SAVED_WORK_TIME = dump[self.KEY_WORK_TIME]
 			self.SAVED_LONG_BREAK_TIME = dump[self.KEY_LONG_BREAK_TIME]
 			self.SAVED_SHORT_BREAK_TIME = dump[self.KEY_SHORT_BREAK_TIME]
+			self.SAVED_START_STOP_KEYBIND = dump[self.KEY_START_STOP_KEYBIND]
 		except IOError:
 			self.SAVED_WORK_TIME = self.DEFAULT_WORK_TIME
 			self.SAVED_LONG_BREAK_TIME = self.DEFAULT_LONG_BREAK_TIME
 			self.SAVED_SHORT_BREAK_TIME = self.DEFAULT_SHORT_BREAK_TIME
+			self.SAVED_START_STOP_KEYBIND = self.DEFAULT_START_STOP_KEYBIND
 
 	def get_work_time(self):
 			return self.SAVED_WORK_TIME
@@ -214,6 +226,9 @@ class Preferences():
 
 	def get_short_break_time(self):
 			return self.SAVED_SHORT_BREAK_TIME
+
+	def get_start_stop_keybind(self):
+			return self.SAVED_START_STOP_KEYBIND
 
 class OptionsWindow(gtk.Window):
 	def __init__(self):
@@ -243,21 +258,29 @@ class OptionsWindow(gtk.Window):
 		self.box3.add(self.entry3)
 		self.main_box.add(self.box3)
 		self.box4 = gtk.HBox()
+		self.label4 = gtk.Label("Start/Stop hotkey:")
+		self.entry4 = gtk.Entry()
+		self.entry4.set_text(str(self.prefs.get_start_stop_keybind()))
+		self.box4.add(self.label4)
+		self.box4.add(self.entry4)
+		self.main_box.add(self.box4)
+		self.box5 = gtk.HBox()
 		self.button1 = gtk.Button(stock=gtk.STOCK_SAVE)
 		self.button1.connect("clicked", self.options_event, "save")
 		self.button2 = gtk.Button(stock=gtk.STOCK_QUIT)
 		self.button2.connect("clicked", self.options_event, "quit")
-		self.box4.add(self.button1)
-		self.box4.add(self.button2)
-		self.main_box.add(self.box4) # TODO: Add a restore values buttom...
+		self.box5.add(self.button1)
+		self.box5.add(self.button2)
+		self.main_box.add(self.box5) # TODO: Add a restore values buttom...
 		self.add(self.main_box)
 
 	def options_event(self, button, event):
 		if(event == "save"):
-			if(self.entry1.get_text() != "" and self.entry2.get_text() != "" and self.entry3.get_text() != ""):
+			if(self.entry1.get_text() != "" and self.entry2.get_text() != "" and self.entry3.get_text() != ""and self.entry4.get_text() != ""):
 				try:
 					values = map(int, [ self.entry1.get_text(), self.entry2.get_text(), self.entry3.get_text()])
-					self.prefs.save_preferences(values[0], values[1], values[2])
+					values.append(self.entry4.get_text())
+					self.prefs.save_preferences(values[0], values[1], values[2], values[3])
 					self.destroy()
 				except ValueError:
 					dialog = gtk.MessageDialog(None, gtk.DIALOG_MODAL, gtk.MESSAGE_INFO, gtk.BUTTONS_NONE, "Please, just use entire numbers.")
@@ -291,6 +314,20 @@ class Notifications(object):
     def pause(self):
         self._pause.show()
 
+class Keybinds(object):
+	def __init__(self, menu_event, preferences):
+		self.menu_event = menu_event
+		self.preferences = preferences
+		self.instance = self
+
+	def bind(self):
+		keystr = self.preferences.get_start_stop_keybind()
+		keybinder.bind(keystr, self.menu_event, None, "play_pause")
+
+	def unbind(self):
+		keystr = self.preferences.get_start_stop_keybind()
+		keybinder.unbind(keystr)
+
 
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser(prog='pumubuntu')
@@ -322,6 +359,8 @@ if __name__ == "__main__":
 		elif(event == "options"):
 			OptionsWindow().show_all()
 
+	keybinds = Keybinds(menu_event, Preferences())
+	keybinds.bind()
 	
 	gtk.gdk.threads_init()
 	# Set an app indicator in system tray...
