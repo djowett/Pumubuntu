@@ -20,7 +20,7 @@ import pynotify
 resources_dir = os.path.abspath(os.path.dirname(sys.argv[0]))
 script_name = os.path.basename(sys.argv[0])
 
-PREFERENCES_FILENAME = resources_dir + "prefs.json"
+PREFERENCES_FILENAME = os.path.join(resources_dir, "prefs.json")
 class Status():
     def __init__(self, notification_icon):
         self.current_status = Status.STOP
