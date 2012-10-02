@@ -179,20 +179,23 @@ class Preferences():
 		self.KEY_LONG_BREAK_TIME = "LT"
 		self.KEY_SHORT_BREAK_TIME = "ST"
 		self.KEY_START_STOP_KEYBIND = "SSK"
+		self.KEY_SHOW_TIME_KEYBIND = "STK"
 		self.DEFAULT_WORK_TIME = 25
 		self.DEFAULT_LONG_BREAK_TIME = 15
 		self.DEFAULT_SHORT_BREAK_TIME = 5
 		self.DEFAULT_START_STOP_KEYBIND = "<Ctrl><Alt>P"
+		self.DEFAULT_SHOW_TIME_KEYBIND = "<Ctrl><Alt>space"
 		self.SAVED_WORK_TIME = 0
 		self.SAVED_LONG_BREAK_TIME =0
 		self.SAVED_SHORT_BREAK_TIME =0
 		self.SAVED_START_STOP_KEYBIND =""
+		self.SAVED_SHOW_TIME_KEYBIND =""
 		self.read_work_time()
 
-	def save_preferences(self, work_time, short_break_time, long_break_time, start_stop_keybind):
+	def save_preferences(self, work_time, short_break_time, long_break_time, start_stop_keybind, show_time_keybind):
 		keybinds.instance.unbind()
 
-		obj = {self.KEY_WORK_TIME: work_time, self.KEY_SHORT_BREAK_TIME: short_break_time, self.KEY_LONG_BREAK_TIME: long_break_time, self.KEY_START_STOP_KEYBIND: start_stop_keybind }
+		obj = {self.KEY_WORK_TIME: work_time, self.KEY_SHORT_BREAK_TIME: short_break_time, self.KEY_LONG_BREAK_TIME: long_break_time, self.KEY_START_STOP_KEYBIND: start_stop_keybind, self.KEY_SHOW_TIME_KEYBIND: show_time_keybind }
 		dump = json.dumps(obj)
 		file = open(PREFERENCES_FILENAME, "w")
 		file.write(dump)
@@ -211,11 +214,13 @@ class Preferences():
 			self.SAVED_LONG_BREAK_TIME = dump[self.KEY_LONG_BREAK_TIME]
 			self.SAVED_SHORT_BREAK_TIME = dump[self.KEY_SHORT_BREAK_TIME]
 			self.SAVED_START_STOP_KEYBIND = dump[self.KEY_START_STOP_KEYBIND]
+			self.SAVED_SHOW_TIME_KEYBIND = dump[self.KEY_SHOW_TIME_KEYBIND]
 		except IOError:
 			self.SAVED_WORK_TIME = self.DEFAULT_WORK_TIME
 			self.SAVED_LONG_BREAK_TIME = self.DEFAULT_LONG_BREAK_TIME
 			self.SAVED_SHORT_BREAK_TIME = self.DEFAULT_SHORT_BREAK_TIME
 			self.SAVED_START_STOP_KEYBIND = self.DEFAULT_START_STOP_KEYBIND
+			self.SAVED_SHOW_TIME_KEYBIND = self.DEFAULT_SHOW_TIME_KEYBIND
 
 	def get_work_time(self):
 			return self.SAVED_WORK_TIME
@@ -229,6 +234,9 @@ class Preferences():
 
 	def get_start_stop_keybind(self):
 			return self.SAVED_START_STOP_KEYBIND
+
+	def get_show_time_keybind(self):
+			return self.SAVED_SHOW_TIME_KEYBIND
 
 class OptionsWindow(gtk.Window):
 	def __init__(self):
@@ -265,13 +273,20 @@ class OptionsWindow(gtk.Window):
 		self.box4.add(self.entry4)
 		self.main_box.add(self.box4)
 		self.box5 = gtk.HBox()
+		self.label5 = gtk.Label("Show time hotkey:")
+		self.entry5 = gtk.Entry()
+		self.entry5.set_text(str(self.prefs.get_show_time_keybind()))
+		self.box5.add(self.label5)
+		self.box5.add(self.entry5)
+		self.main_box.add(self.box5)
+		self.box6 = gtk.HBox()
 		self.button1 = gtk.Button(stock=gtk.STOCK_SAVE)
 		self.button1.connect("clicked", self.options_event, "save")
 		self.button2 = gtk.Button(stock=gtk.STOCK_QUIT)
 		self.button2.connect("clicked", self.options_event, "quit")
-		self.box5.add(self.button1)
-		self.box5.add(self.button2)
-		self.main_box.add(self.box5) # TODO: Add a restore values buttom...
+		self.box6.add(self.button1)
+		self.box6.add(self.button2)
+		self.main_box.add(self.box6) # TODO: Add a restore values buttom...
 		self.add(self.main_box)
 
 	def options_event(self, button, event):
@@ -280,7 +295,8 @@ class OptionsWindow(gtk.Window):
 				try:
 					values = map(int, [ self.entry1.get_text(), self.entry2.get_text(), self.entry3.get_text()])
 					values.append(self.entry4.get_text())
-					self.prefs.save_preferences(values[0], values[1], values[2], values[3])
+					values.append(self.entry5.get_text())
+					self.prefs.save_preferences(values[0], values[1], values[2], values[3], values[4])
 					self.destroy()
 				except ValueError:
 					dialog = gtk.MessageDialog(None, gtk.DIALOG_MODAL, gtk.MESSAGE_INFO, gtk.BUTTONS_NONE, "Please, just use entire numbers.")
@@ -301,6 +317,8 @@ class Notifications(object):
         self._rest.set_timeout(1)
         self._pause = pynotify.Notification("Long break!","Good job! You earned a long break!")
         self._pause.set_timeout(1)
+        self._show = pynotify.Notification("")
+        self._show.set_timeout(1)
 
     def run(self):
         self._run.show()
@@ -314,6 +332,10 @@ class Notifications(object):
     def pause(self):
         self._pause.show()
 
+    def show(self, time):
+        self._show.update(time)
+        self._show.show()
+
 class Keybinds(object):
 	def __init__(self, menu_event, preferences):
 		self.menu_event = menu_event
@@ -321,12 +343,16 @@ class Keybinds(object):
 		self.instance = self
 
 	def bind(self):
-		keystr = self.preferences.get_start_stop_keybind()
-		keybinder.bind(keystr, self.menu_event, None, "play_pause")
+		keystr1 = self.preferences.get_start_stop_keybind()
+		keybinder.bind(keystr1, self.menu_event, None, "play_pause")
+		keystr2 = self.preferences.get_show_time_keybind()
+		keybinder.bind(keystr2, self.menu_event, None, "show_time")
 
 	def unbind(self):
-		keystr = self.preferences.get_start_stop_keybind()
-		keybinder.unbind(keystr)
+		keystr1 = self.preferences.get_start_stop_keybind()
+		keybinder.unbind(keystr1)
+		keystr2 = self.preferences.get_show_time_keybind()
+		keybinder.unbind(keystr2)
 
 
 if __name__ == "__main__":
@@ -346,21 +372,6 @@ if __name__ == "__main__":
 		prit("[!] Error: Could not load pynotify...")
 		exit()
 
-	def menu_event(menu_item, event):
-		if(event == "play_pause"):
-			if (timer.isRunning()):
-				
-				timer.stop()
-			else:
-				
-				timer.start()
-		if(event == "exit"):
-			gtk.main_quit()
-		elif(event == "options"):
-			OptionsWindow().show_all()
-
-	keybinds = Keybinds(menu_event, Preferences())
-	keybinds.bind()
 	
 	gtk.gdk.threads_init()
 	# Set an app indicator in system tray...
@@ -369,6 +380,27 @@ if __name__ == "__main__":
 	ind.set_attention_icon(resources_dir + "/images/flag-blue.png")
 
 	status = Status(ind) # we use this here and there
+
+	def menu_event(menu_item, event):
+		if(event == "play_pause"):
+			if (timer.isRunning()):
+				
+				timer.stop()
+			else:
+				
+				timer.start()
+		elif(event == "exit"):
+			gtk.main_quit()
+		elif(event == "options"):
+			OptionsWindow().show_all()
+		elif(event == "show_time"):
+			label = "%(minute)02d:%(second)02d" % \
+										{"minute": timer.thread.minutes,"second": timer.thread.seconds}
+			status.notifications.show(label)
+
+	keybinds = Keybinds(menu_event, Preferences())
+	keybinds.bind()
+
 	# Indicator menu...
 	menu = gtk.Menu()
 	label_time = gtk.Label("00:00")
