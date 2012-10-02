@@ -74,31 +74,31 @@ class Status():
         self.indicator.set_icon(iconfile)
         self.indicator.set_attention_icon(iconfile)
 
-    if platform.system() == "Windows":
-        from winsound import PlaySound, SND_FILENAME, SND_ASYNC
-        PlaySound(soundfile, SND_FILENAME|SND_ASYNC)
-    elif (platform.system() == "Linux"):
-        from wave import open as waveOpen
-        from ossaudiodev import open as ossOpen
-        s = waveOpen(soundfile,'rb')
-        (nc,sw,fr,nf,comptype, compname) = s.getparams( )
-        dsp = ossOpen('/dev/dsp','w')
-        try:
-            from ossaudiodev import AFMT_S16_NE
-        except ImportError:
-            if byteorder == "little":
-                AFMT_S16_NE = ossaudiodev.AFMT_S16_LE
-            else:
-                AFMT_S16_NE = ossaudiodev.AFMT_S16_BE
-        dsp.setparameters(AFMT_S16_NE, nc, fr)
-        data = s.readframes(nf)
-        s.close()
-        dsp.write(data)
-        dsp.close()
+        if platform.system() == "Windows":
+            from winsound import PlaySound, SND_FILENAME, SND_ASYNC
+            PlaySound(soundfile, SND_FILENAME|SND_ASYNC)
+        elif (platform.system() == "Linux"):
+            from wave import open as waveOpen
+            from ossaudiodev import open as ossOpen
+            s = waveOpen(soundfile,'rb')
+            (nc,sw,fr,nf,comptype, compname) = s.getparams( )
+            dsp = ossOpen('/dev/dsp','w')
+            try:
+                from ossaudiodev import AFMT_S16_NE
+            except ImportError:
+                if byteorder == "little":
+                    AFMT_S16_NE = ossaudiodev.AFMT_S16_LE
+                else:
+                    AFMT_S16_NE = ossaudiodev.AFMT_S16_BE
+            dsp.setparameters(AFMT_S16_NE, nc, fr)
+            data = s.readframes(nf)
+            s.close()
+            dsp.write(data)
+            dsp.close()
 
     def getMinutes(self): #returns current status minutes
         prefs = Preferences()
-    if (self.current_status == self.STOP):
+        if (self.current_status == self.STOP):
             return 0 #minutes
         elif (self.current_status == self.RUN):
             return prefs.get_work_time()
