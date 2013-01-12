@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+print("Import Python modules. If one is missing get it with \"sudo apt-get install python-...\".");
+
 import gobject
 import gtk
 import appindicator
@@ -369,7 +371,7 @@ if __name__ == "__main__":
             exit()
 
     if not(pynotify.init("Pumubuntu")):
-        prit("[!] Error: Could not load pynotify...")
+        print("[!] Error: Could not load pynotify...")
         exit()
 
     
